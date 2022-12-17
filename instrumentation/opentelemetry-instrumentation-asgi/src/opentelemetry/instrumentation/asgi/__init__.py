@@ -260,8 +260,20 @@ class ASGIGetter(Getter[dict]):
         return decoded
 
     def keys(self, carrier: dict) -> typing.List[str]:
-        headers = carrier.get("headers") or []
-        return [_key.decode("utf8") for (_key, _value) in headers]
+        
+        returnable = []
+        
+        #we only need to check for headers values
+        
+        if 'headers' in carrier:
+            "also important to check for bytes and strings"
+            for _key, val in carrier['headers']:
+                if isinstance(_key, bytes):
+                    returnable.append(_key.decode("utf8"))
+                elif isinstance(_key, str):
+                    returnable.append(_key)
+
+        return returnable
 
 
 asgi_getter = ASGIGetter()
