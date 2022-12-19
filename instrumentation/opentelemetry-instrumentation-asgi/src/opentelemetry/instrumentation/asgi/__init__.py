@@ -285,22 +285,33 @@ class ASGIGetter(Getter[dict]):
             #if we have another dict, lets make a recursive call
             if isinstance(_val, Dict):
                 #append our current key
-                returnable.append(_key)
+                append_keys(_key)
                 
                 #append all keys within the dict
                 for x in self.keys(_val):
-                    returnable.append(x)
+                    append_keys(x)
                     
-            # if we have a list, lets iter over that
+            # if we have a list, lets iter over that. List can contain tuples(headers) dicts and string so lets approach them all as well
             elif isinstance(_val, List):
-                for _child_key, _child_val in _val:
-
-                    append_keys(_child_key)
+                for list_key in _val:
+                    
+                    #Check for the Tuple
+                    if isinstance(list_key, Tuple):
+                        append_keys(list_key[0])
+                   
+                    #check for the dict   
+                    elif isinstance(list_key, Dict):
+                        append_keys(_key)
+                        
+                        #append all keys within the dict
+                        for x in self.keys(_val):
+                            append_keys(x)
+                    else:
+                        append_keys(list_key)
                     
             #finally, if our key was just a string, append that
             else:
-                append_keys(_key)
-
+                append_keys(_key) 
 
         return returnable
     
