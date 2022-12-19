@@ -193,7 +193,7 @@ import typing
 import urllib
 from functools import wraps
 from timeit import default_timer
-from typing import Tuple
+from typing import Tuple, List, Dict
 
 from asgiref.compatibility import guarantee_single_callable
 
@@ -260,9 +260,51 @@ class ASGIGetter(Getter[dict]):
         return decoded
 
     def keys(self, carrier: dict) -> typing.List[str]:
-        return [_key.decode("utf8") for (_key, _value) in carrier]
+    
+        """
+        In most examples of propogators, they attempt to get a header key with .get() but when that fails they seem to 
+        want to search all keys within carrier.  There is not a prescribed structure for carrier in the specs 
+        https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/context/api-propagators.md
+        So we need to evaluate the carrier and peer into any child lists or dicts within carrier and return all of the keys
+        """
+        
+        
+        #define the  default empty list
+        returnable = []
+
+        #internal function that appends keys
+        def append_keys(key):
+            if isinstance(key, bytes):
+                    returnable.append(key.decode("utf8"))
+            elif isinstance(key, str):
+                    returnable.append(key)            
+
+        #carrier is a dict, so iterate over .items()
+        for _key, _val in carrier.items():
+            
+            #if we have another dict, lets make a recursive call
+            if isinstance(_val, Dict):
+                #append our current key
+                returnable.append(_key)
+                
+                #append all keys within the dict
+                for x in self.keys(_val):
+                    returnable.append(x)
+                    
+            # if we have a list, lets iter over that
+            elif isinstance(_val, List):
+                for _child_key, _child_val in _val:
+
+                    append_keys(_child_key)
+                    
+            #finally, if our key was just a string, append that
+            else:
+                append_keys(_key)
 
 
+        return returnable
+    
+    
 asgi_getter = ASGIGetter()
 
 
